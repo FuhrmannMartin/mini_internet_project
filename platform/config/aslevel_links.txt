@@ -1,0 +1,1 @@
+1	ZURI	Provider	3	MUNI	Customer	1mbit	2.5ms	50ms	179.1.3.0/24
