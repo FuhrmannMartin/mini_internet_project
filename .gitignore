@@ -1,1 +1,7 @@
 .DS_Store
+
+# Ignore IDE settings
+.idea/
+
+# Ignore git internal folder (normally not required, but safe)
+.git/
