@@ -230,3 +230,16 @@ echo "bgp_clear $(($(date +%s%N)/1000000))" >> "${DIRECTORY}"/log.txt
 time ./setup/bgp_clear.sh "${DIRECTORY}"
 
 echo "$(date +%Y-%m-%d_%H-%M-%S)"
+
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+file1="${SCRIPT_DIR}/groups/passwords.txt"
+
+if [[ -f "$file1" ]]; then
+  echo
+  echo "===== Content of passwords.txt ====="
+  cat "$file1"
+else
+  echo "File not found: $file1"
+fi
+
