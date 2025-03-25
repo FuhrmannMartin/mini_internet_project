@@ -234,12 +234,24 @@ echo "$(date +%Y-%m-%d_%H-%M-%S)"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 file1="${SCRIPT_DIR}/groups/passwords.txt"
+file2="${SCRIPT_DIR}/groups/ssh_measurement.txt"
 
 if [[ -f "$file1" ]]; then
   echo
   echo "===== Content of passwords.txt ====="
+  echo "... for group-specific ssh access"
   cat "$file1"
 else
   echo "File not found: $file1"
+fi
+
+if [[ -f "$file2" ]]; then
+  echo
+  echo "===== Content of ssh_measurements.txt ====="
+  echo "... access to ssh_measurement container for active probing)"
+  echo "(e.g. from AS1 to AS2: ./launch_traceroute.sh 1 2.108.0.1"
+  cat "$file2"
+else
+  echo "File not found: $file2"
 fi
 
