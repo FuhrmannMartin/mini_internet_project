@@ -235,6 +235,7 @@ echo "$(date +%Y-%m-%d_%H-%M-%S)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 file1="${SCRIPT_DIR}/groups/passwords.txt"
 file2="${SCRIPT_DIR}/groups/ssh_measurement.txt"
+autoconfig="${SCRIPT_DIR}/utils/autoconfiguration/configure_as.sh"
 
 if [[ -f "$file1" ]]; then
   echo
@@ -255,3 +256,11 @@ else
   echo "File not found: $file2"
 fi
 
+# Execute autoconfiguration script at the end
+if [[ -f "$autoconfig" && -x "$autoconfig" ]]; then
+  echo
+  echo "===== Running autoconfiguration script ====="
+  "$autoconfig"
+else
+  echo "Autoconfiguration script not found or not executable: $autoconfig"
+fi
