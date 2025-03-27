@@ -10,7 +10,7 @@ trap "exit" SIGINT
 src_grp=$1
 dst_ip=$2
 
-traceroute -i group_"${src_grp}" "${dst_ip}"
+traceroute -i group${src_grp} "${dst_ip}"
 
 # for hop in `seq 30`
 # do

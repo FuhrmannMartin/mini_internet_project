@@ -7,6 +7,18 @@ set -o errexit # exit on error
 set -o pipefail # catch errors in pipelines
 set -o nounset # exit on undeclared variable
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cleanup="${SCRIPT_DIR}/cleanup/cleanup.sh"
+
+# Execute cleanup script at the start
+if [[ -f "cleanup" && -x "cleanup" ]]; then
+  echo
+  echo "===== Running cleanup script ====="
+  "$cleanup" .
+else
+  echo "Cleanup script not found or not executable: $cleanup"
+fi
+
 # Check for programs we'll need.
 search_path () {
     # display the path to the command
@@ -231,8 +243,6 @@ time ./setup/bgp_clear.sh "${DIRECTORY}"
 
 echo "$(date +%Y-%m-%d_%H-%M-%S)"
 
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 file1="${SCRIPT_DIR}/groups/passwords.txt"
 file2="${SCRIPT_DIR}/groups/ssh_measurement.txt"
 autoconfig="${SCRIPT_DIR}/utils/autoconfiguration/configure_as.sh"
