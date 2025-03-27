@@ -75,6 +75,8 @@ if [[ "$MeasureRequired" == "True" ]]; then
     # # update the launching script
     # docker cp "${DIRECTORY}"/docker_images/measurement/launch_traceroute.sh \
     #     MEASUREMENT:/root/launch_traceroute.sh > /dev/null
+    docker cp "${DIRECTORY}"/docker_images/measurement/launch_traceroute.sh \
+          MEASUREMENT:/root/launch_traceroute.sh > /dev/null
 else
     echo "MEASUREMENT service is not required"
 fi

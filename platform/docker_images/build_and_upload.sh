@@ -10,11 +10,7 @@ images=(base base_supervisor host router ixp ssh measurement dns switch matrix v
 
 for image in "${images[@]}"; do
     echo 'Build '$image
-    if [ "$image" == "measurement" ]; then
-      docker build --no-cache --tag="d_${image}" "docker_images/${image}/"
-    else
-      docker build --tag="d_${image}" "docker_images/${image}/"
-    fi
+    docker build --tag="d_${image}" "docker_images/${image}/"
 done
 
 docker login
