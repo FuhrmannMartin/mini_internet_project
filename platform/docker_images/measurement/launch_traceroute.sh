@@ -14,12 +14,12 @@ dst_ip=$2
 json_file="/routes/routes.json"
 timestamp=$(date "+%Y-%m-%dT%H-%M-%S")
 
-# Temporary raw traceroute output
+# Temporary files
 tmp_raw="/tmp/traceroute_raw.txt"
 tmp_parsed="/tmp/traceroute_parsed.txt"
 tmp_entry="/tmp/traceroute_entry.json"
 
-# Step 1: Run traceroute live and save raw
+# Step 1: Run traceroute and show live output
 traceroute -i group${src_grp} "${dst_ip}" | tee "$tmp_raw"
 tail -n +2 "$tmp_raw" > "$tmp_parsed"
 
@@ -32,46 +32,43 @@ tail -n +2 "$tmp_raw" > "$tmp_parsed"
   echo "    \"routes\": ["
 } > "$tmp_entry"
 
-awk '
-{
-  hop=$1
-  hostname = "*"
-  ip = "*"
-  rtt = "null"
+total_lines=$(wc -l < "$tmp_parsed")
+line_no=0
 
-  if ($2 == "*") {
-    # unreachable hop
-  } else {
-    hostname = $2
-    ip = $3
-    gsub("[()]", "", ip)
-    for (i = 4; i <= NF; i++) {
-      if ($i ~ /^[0-9.]+$/) {
-        rtt = $i
-        break
-      }
-    }
-  }
+# Step 2.1: Loop manually to control trailing comma
+while IFS= read -r line; do
+  line_no=$((line_no + 1))
 
-  printf "      {\"hop\": %d, \"hostname\": \"%s\", \"ip\": \"%s\", \"rtt_ms\": %s}", hop, hostname, ip, rtt
+  hop=$(echo "$line" | awk '{print $1}')
+  hostname=$(echo "$line" | awk '{print $2}')
+  ip=$(echo "$line" | awk '{print $3}' | tr -d '()')
+  rtt=$(echo "$line" | awk '{for (i=4;i<=NF;i++) if ($i ~ /^[0-9.]+$/) {print $i; break}}')
 
-  if (NR != ENVIRON["TRACEROUTE_HOP_COUNT"])
-    printf ","
-  printf "\n"
-}
-' TRACEROUTE_HOP_COUNT=$(wc -l < "$tmp_parsed") "$tmp_parsed" >> "$tmp_entry"
+  # Defaults
+  [ -z "$hostname" ] && hostname="*"
+  [ -z "$ip" ] && ip="*"
+  [ -z "$rtt" ] && rtt="null"
+
+  printf '      {"hop": %d, "hostname": "%s", "ip": "%s", "rtt_ms": %s}' "$hop" "$hostname" "$ip" "$rtt" >> "$tmp_entry"
+
+  if [ "$line_no" -lt "$total_lines" ]; then
+    echo "," >> "$tmp_entry"
+  else
+    echo "" >> "$tmp_entry"
+  fi
+
+done < "$tmp_parsed"
 
 echo "    ]" >> "$tmp_entry"
 echo "  }" >> "$tmp_entry"
 
 # Step 3: Append to /routes/routes.json
 if [ ! -f "$json_file" ]; then
-  # Create new array with first element
+  # First element in new array
   echo "[" > "$json_file"
   cat "$tmp_entry" >> "$json_file"
   echo "]" >> "$json_file"
 else
-  # Insert before closing bracket
   tmp_combined="/tmp/routes_combined.json"
   head -n -1 "$json_file" > "$tmp_combined"
   echo "," >> "$tmp_combined"
@@ -80,11 +77,10 @@ else
   mv "$tmp_combined" "$json_file"
 fi
 
-# Clean up
+# Cleanup
 rm "$tmp_raw" "$tmp_parsed" "$tmp_entry"
 
 echo "Traceroute appended to $json_file"
-
 
 
 # for hop in `seq 30`
