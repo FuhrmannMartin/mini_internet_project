@@ -14,7 +14,7 @@ src_grp=$1
 dst_ip=$2
 
 # Output setup
-output_dir="/root/routes/${src_grp}/${dst_ip}"
+output_dir="/routes/${src_grp}/${dst_ip}"
 mkdir -p "$output_dir"
 timestamp=$(date "+%Y-%m-%dT%H-%M-%S")
 raw_output_file="${output_dir}/traceroutes_${timestamp}.txt"
