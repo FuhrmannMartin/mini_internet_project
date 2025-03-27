@@ -14,27 +14,24 @@ dst_ip=$2
 output_dir="/root/${src_grp}/${dst_ip}"
 mkdir -p "$output_dir"
 timestamp=$(date "+%Y-%m-%dT%H-%M-%S")
-output_file="${output_dir}/traceroute_${timestamp}.json"
+json_output_file="${output_dir}/traceroute_${timestamp}.json"
+raw_output_file="${output_dir}/traceroute_${timestamp}.txt"
 
-# Run traceroute and parse output
-traceroute_output=$(traceroute -i group${src_grp} "${dst_ip}")
+# Run traceroute, show it live, and save raw output
+traceroute -i group${src_grp} "${dst_ip}" | tee "$raw_output_file" | tail -n +2 > /tmp/traceroute_parsed.txt
 
-# Begin JSON array
-echo "[" > "$output_file"
+# Build JSON file
+echo "[" > "$json_output_file"
 
-# Parse each hop line (skipping the header line)
-echo "$traceroute_output" | tail -n +2 | awk '
-BEGIN { hop=0 }
+awk '
 {
-  hop++
-  ip = ""
-  hostname = ""
-  rtt = ""
+  hop=$1
+  hostname = "*"
+  ip = "*"
+  rtt = "null"
 
   if ($2 == "*") {
-    ip = "*"
-    hostname = "*"
-    rtt = "null"
+    # All stars - unreachable
   } else {
     hostname = $2
     ip = $3
@@ -47,19 +44,21 @@ BEGIN { hop=0 }
     }
   }
 
-  printf "  {\"hop\": %d, \"hostname\": \"%s\", \"ip\": \"%s\", \"rtt_ms\": %s}", hop, hostname, ip, (rtt == "" ? "null" : rtt)
+  printf "  {\"hop\": %d, \"hostname\": \"%s\", \"ip\": \"%s\", \"rtt_ms\": %s}", hop, hostname, ip, rtt
 
-  # add comma if not last line
-  if (NR > 1 && NR != ENVIRON["TRACEROUTE_HOP_COUNT"])
+  if (NR != ENVIRON["TRACEROUTE_HOP_COUNT"])
     printf ","
   printf "\n"
 }
-' TRACEROUTE_HOP_COUNT=$(echo "$traceroute_output" | wc -l) >> "$output_file"
+' TRACEROUTE_HOP_COUNT=$(wc -l < /tmp/traceroute_parsed.txt) /tmp/traceroute_parsed.txt >> "$json_output_file"
 
-# End JSON array
-echo "]" >> "$output_file"
+echo "]" >> "$json_output_file"
 
-echo "Traceroute JSON saved to $output_file"
+# Clean up
+rm /tmp/traceroute_parsed.txt
+
+echo "Traceroute JSON saved to $json_output_file"
+
 
 
 
