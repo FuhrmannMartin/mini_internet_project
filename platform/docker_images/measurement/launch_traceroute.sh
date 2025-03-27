@@ -1,41 +1,37 @@
 #!/bin/bash
 
-# Usage check
 if [ $# -ne 2 ]; then
     echo "$0: usage ./launch_traceroute.sh <src_grp> <dst_ip>"
     exit 1
 fi
 
-# Trap Ctrl+C
 trap "exit" SIGINT
 
-# Parameters
 src_grp=$1
 dst_ip=$2
 
-# Output setup
-output_dir="/routes/${src_grp}/${dst_ip}"
-mkdir -p "$output_dir"
+# Path to persistent JSON file
+json_file="/routes/routes.json"
 timestamp=$(date "+%Y-%m-%dT%H-%M-%S")
-raw_output_file="${output_dir}/traceroutes_${timestamp}.txt"
-json_output_file="${output_dir}/traceroutes_${timestamp}.json"
 
-# Step 1: Run traceroute and save raw output
-traceroute -i group${src_grp} "${dst_ip}" | tee "$raw_output_file"
+# Temporary raw traceroute output
+tmp_raw="/tmp/traceroute_raw.txt"
+tmp_parsed="/tmp/traceroute_parsed.txt"
+tmp_entry="/tmp/traceroute_entry.json"
 
-# Step 2: Parse hops (skip header) into a temp file
-tail -n +2 "$raw_output_file" > /tmp/traceroute_parsed.txt
+# Step 1: Run traceroute live and save raw
+traceroute -i group${src_grp} "${dst_ip}" | tee "$tmp_raw"
+tail -n +2 "$tmp_raw" > "$tmp_parsed"
 
-# Step 3: Start JSON export
+# Step 2: Write one traceroute object to tmp_entry
 {
-  echo "{"
-  echo "  \"src_grp\": ${src_grp},"
-  echo "  \"dst_ip\": \"${dst_ip}\","
-  echo "  \"timestamp\": \"${timestamp}\","
-  echo "  \"routes\": ["
-} > "$json_output_file"
+  echo "  {"
+  echo "    \"src_grp\": ${src_grp},"
+  echo "    \"dst_ip\": \"${dst_ip}\","
+  echo "    \"timestamp\": \"${timestamp}\","
+  echo "    \"routes\": ["
+} > "$tmp_entry"
 
-# Step 4: Process lines into JSON objects
 awk '
 {
   hop=$1
@@ -57,23 +53,38 @@ awk '
     }
   }
 
-  printf "    {\"hop\": %d, \"hostname\": \"%s\", \"ip\": \"%s\", \"rtt_ms\": %s}", hop, hostname, ip, rtt
+  printf "      {\"hop\": %d, \"hostname\": \"%s\", \"ip\": \"%s\", \"rtt_ms\": %s}", hop, hostname, ip, rtt
 
   if (NR != ENVIRON["TRACEROUTE_HOP_COUNT"])
     printf ","
   printf "\n"
 }
-' TRACEROUTE_HOP_COUNT=$(wc -l < /tmp/traceroute_parsed.txt) /tmp/traceroute_parsed.txt >> "$json_output_file"
+' TRACEROUTE_HOP_COUNT=$(wc -l < "$tmp_parsed") "$tmp_parsed" >> "$tmp_entry"
 
-# Step 5: Close JSON structure
-echo "  ]" >> "$json_output_file"
-echo "}" >> "$json_output_file"
+echo "    ]" >> "$tmp_entry"
+echo "  }" >> "$tmp_entry"
+
+# Step 3: Append to /routes/routes.json
+if [ ! -f "$json_file" ]; then
+  # Create new array with first element
+  echo "[" > "$json_file"
+  cat "$tmp_entry" >> "$json_file"
+  echo "]" >> "$json_file"
+else
+  # Insert before closing bracket
+  tmp_combined="/tmp/routes_combined.json"
+  head -n -1 "$json_file" > "$tmp_combined"
+  echo "," >> "$tmp_combined"
+  cat "$tmp_entry" >> "$tmp_combined"
+  echo "]" >> "$tmp_combined"
+  mv "$tmp_combined" "$json_file"
+fi
 
 # Clean up
-rm /tmp/traceroute_parsed.txt
+rm "$tmp_raw" "$tmp_parsed" "$tmp_entry"
 
-# Done
-echo "Traceroute JSON saved to $json_output_file"
+echo "Traceroute appended to $json_file"
+
 
 
 # for hop in `seq 30`
