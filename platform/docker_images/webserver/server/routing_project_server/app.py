@@ -41,8 +41,8 @@ config_defaults = {
         "matrix": "../../../groups/matrix/connectivity.txt",
         "matrix_stats": "../../../groups/matrix/stats.txt",
         "traceroutes": "../../../routes.json",
-        "topology_txt": "static/topology.txt",
-        "topology_json": "static/topology.json",
+        "topology_txt": "routing_project_server/static/topology.txt",
+        "topology_json": "routing_project_server/static/topology.json",
     },
     'KRILL_URL': "http://{hostname}:3080/index.html",
     'BASIC_AUTH_USERNAME': 'admin',
@@ -76,8 +76,6 @@ def create_app(config=None):
     elif config is not None:
         app.config.from_pyfile(config)
 
-    # Generate topology data once at start
-    from .services.parsers import parse_topology_txt
     try:
         parse_topology_txt(config_defaults)
     except Exception:
