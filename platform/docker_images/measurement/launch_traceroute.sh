@@ -7,11 +7,13 @@ fi
 
 trap "exit" SIGINT
 
-src_grp=$1
-dst_ip=$2
+src_grp="$1"
+dst_ip="$2"
 
 # Path to persistent JSON file
-json_file="/routes/routes.json"
+folder="traceroutes"
+json_file="/${folder}/routes.json"
+mkdir -p "/${folder}"
 timestamp=$(date "+%Y-%m-%dT%H-%M-%S")
 
 # Temporary files
@@ -20,7 +22,8 @@ tmp_parsed="/tmp/traceroute_parsed.txt"
 tmp_entry="/tmp/traceroute_entry.json"
 
 # Step 1: Run traceroute and show live output
-traceroute -i group${src_grp} "${dst_ip}" | tee "$tmp_raw"
+echo "Running traceroute from group${src_grp} to ${dst_ip}..."
+traceroute -i "group${src_grp}" "${dst_ip}" | tee "$tmp_raw"
 tail -n +2 "$tmp_raw" > "$tmp_parsed"
 
 # Step 2: Write one traceroute object to tmp_entry
@@ -44,6 +47,11 @@ while IFS= read -r line; do
   ip=$(echo "$line" | awk '{print $3}' | tr -d '()')
   rtt=$(echo "$line" | awk '{for (i=4;i<=NF;i++) if ($i ~ /^[0-9.]+$/) {print $i; break}}')
 
+  # Skip invalid hop lines
+  if ! [[ "$hop" =~ ^[0-9]+$ ]]; then
+    continue
+  fi
+
   # Defaults
   [ -z "$hostname" ] && hostname="*"
   [ -z "$ip" ] && ip="*"
@@ -62,9 +70,8 @@ done < "$tmp_parsed"
 echo "    ]" >> "$tmp_entry"
 echo "  }" >> "$tmp_entry"
 
-# Step 3: Append to /routes/routes.json
+# Step 3: Append to routes.json
 if [ ! -f "$json_file" ]; then
-  # First element in new array
   echo "[" > "$json_file"
   cat "$tmp_entry" >> "$json_file"
   echo "]" >> "$json_file"
@@ -78,13 +85,6 @@ else
 fi
 
 # Cleanup
-rm "$tmp_raw" "$tmp_parsed" "$tmp_entry"
+rm -f "$tmp_raw" "$tmp_parsed" "$tmp_entry"
 
 echo "Traceroute appended to $json_file"
-
-
-# for hop in `seq 30`
-# do
-#     echo -e 'Hop '$hop':  \c'
-#     nping --interface group_"${src_grp}" --source-ip "${src_grp}".0.199.2 --dest-ip "${dst_ip}" --tr --ttl "${hop}" -c 1 -H --delay 100ms 2> /dev/null | grep RCVD | cut -f 4,7,8,9 -d ' ' | cut -f 2 -d '['
-# done
