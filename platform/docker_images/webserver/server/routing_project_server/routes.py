@@ -1,4 +1,5 @@
 import math
+import json
 from typing import Optional
 from flask import Blueprint, current_app, jsonify, request
 from flask import redirect, render_template, url_for
@@ -61,6 +62,16 @@ def connectivity_matrix():
 @main_bp.route('/traceroutes')
 def show_topology():
     return render_template('topology.html')
+
+@main_bp.route("/api/traceroute")
+def get_traceroute():
+    traceroute_path = current_app.config['LOCATIONS']['traceroutes']
+    try:
+        with open(traceroute_path, "r") as f:
+            data = json.load(f)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @main_bp.route("/looking-glass")
 @main_bp.route("/looking-glass/<int:group>")

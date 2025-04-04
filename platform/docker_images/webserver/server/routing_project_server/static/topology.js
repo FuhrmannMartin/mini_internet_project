@@ -1,7 +1,7 @@
 async function loadTopology() {
   let data;
   try {
-    const response = await fetch('topology.json');
+    const response = await fetch('/static/topology.json');
     if (!response.ok) {
       throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
     }
@@ -64,8 +64,18 @@ async function loadTopology() {
 }
 
 async function drawTraceroutePath(network, allNodes) {
-  const response = await fetch('/api/traceroute');
-  const data = await response.json();
+  let data;
+  try {
+    const response = await fetch('/api/traceroute');
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+    }
+    data = await response.json();
+  } catch (err) {
+    console.error("Failed to load traceroutes:", err);
+    return;
+  }
+
   const asPath = data.as_path;  // Example: [3, 4, 5, 6, 7, 8]
   const color_highlight = '#8e44ad'
 

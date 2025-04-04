@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from 'macros.html' import update_message, h1 %}
 
 {% block head %}
 {{ super() }}
@@ -8,20 +9,49 @@
 {% endblock %}
 
 {% block body %}
-<h1 class="text-2xl font-bold text-center mt-6">Mini-Internet Topology</h1>
+<div id="lg-body" class="max-w-4xl mx-auto px-6 pt-6 mb-16">
+    {{ h1("topology") }}
 
-<div id="network" class="w-full h-[80vh] mt-4 border"></div>
+    <p class="mb-2">
+	This visualization shows the AS-level topology including Tier 1 ISPs, Internet Exchange Points, student-operated transit ASes, and stub networks. You can also view the traceroute path dynamically overlaid on top of this topology.
+    </p>
 
-<div class="legend p-4">
-  <h3 class="text-lg font-semibold">Legend</h3>
-  <div class="legend-item"><span class="dot" style="background: #e74c3c;"></span> Tier 1 AS</div>
-  <div class="legend-item"><span class="dot" style="background: #f39c12;"></span> IXP</div>
-  <div class="legend-item"><span class="dot" style="background: #3498db;"></span> Transit AS (Student)</div>
-  <div class="legend-item"><span class="dot" style="background: #7f8c8d;"></span> Stub AS</div>
-  <div class="legend-item"><span class="legend-line" style="border-top: 2px solid red;"></span> Provider/Customer Link</div>
-  <div class="legend-item"><span class="legend-line" style="border-top: 2px dashed green;"></span> Peer/Peer Link</div>
-  <div class="legend-item"><span class="legend-line" style="border-top: 2px solid #8e44ad;"></span> Traceroute Path</div>
+    <div id="network" class="w-full h-[80vh] mt-6 mb-8 border rounded shadow-sm bg-white"></div>
+
+    <div class="legend bg-neutral-50 p-4 rounded border text-sm text-neutral-700">
+        <h3 class="text-lg font-semibold mb-2">Legend</h3>
+        <div class="grid grid-cols-2 gap-y-2">
+            <div class="legend-item flex items-center">
+                <span class="w-4 h-4 rounded-full inline-block mr-2" style="background: #e74c3c;"></span>
+                Tier 1 AS
+            </div>
+            <div class="legend-item flex items-center">
+                <span class="w-4 h-4 rounded inline-block mr-2" style="background: #f39c12;"></span>
+                IXP
+            </div>
+            <div class="legend-item flex items-center">
+                <span class="w-4 h-4 rounded-full inline-block mr-2" style="background: #3498db;"></span>
+                Transit AS (Student)
+            </div>
+            <div class="legend-item flex items-center">
+                <span class="w-4 h-4 rounded-full inline-block mr-2" style="background: #7f8c8d;"></span>
+                Stub AS
+            </div>
+            <div class="legend-item flex items-center">
+                <span class="w-8 border-t-2 border-red-500 inline-block mr-2"></span>
+                Provider/Customer Link
+            </div>
+            <div class="legend-item flex items-center">
+                <span class="w-8 border-t-2 border-dashed border-green-500 inline-block mr-2"></span>
+                Peer/Peer Link
+            </div>
+            <div class="legend-item flex items-center">
+                <span class="w-8 border-t-2 border-[#8e44ad] inline-block mr-2"></span>
+                Traceroute Path
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='topology.js') }}"></script>
 </div>
-
-<script src="{{ url_for('static', filename='topology.js') }}"></script>
 {% endblock %}
