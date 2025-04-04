@@ -1,0 +1,17 @@
+[
+  {
+    "src_grp": 3,
+    "dst_ip": "3.0.4.2",
+    "timestamp": "2025-03-27T15-27-18",
+    "routes": [
+      {"hop": 1, "hostname": "measurement.mila.group3", "ip": "3.0.199.1", "rtt_ms": 0.096},
+      {"hop": 2, "hostname": "luga.group3", "ip": "3.0.11.1", "rtt_ms": 10.094},
+      {"hop": 3, "hostname": "zuri.group3", "ip": "3.0.3.1", "rtt_ms": 20.114},
+      {"hop": 4, "hostname": "muni.group4", "ip": "3.0.4.2", "rtt_ms": 30.148},
+      {"hop": 5, "hostname": "muni.group5", "ip": "3.0.4.2", "rtt_ms": 30.148},
+      {"hop": 6, "hostname": "muni.group6", "ip": "3.0.4.2", "rtt_ms": 30.148},
+      {"hop": 7, "hostname": "muni.group7", "ip": "3.0.4.2", "rtt_ms": 30.148},
+      {"hop": 8, "hostname": "muni.group8", "ip": "3.0.4.2", "rtt_ms": 30.148}
+    ]
+  }
+]
