@@ -245,7 +245,7 @@ def _read_clean(filename: os.PathLike) -> List[str]:
     """Read a file and make sure that all delimiters are single tabs."""
     try:
         with open(Path(filename)) as file:
-            return [re.sub('\s+', '\t', line) for line in file]
+            return [re.sub(r'\s+', '\t', line) for line in file]
     except:
         print("Error accessing " + filename)
         return []
