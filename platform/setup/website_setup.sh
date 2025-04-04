@@ -80,6 +80,7 @@ docker run -itd --name="WEB" --cpus=2 \
     -v ${DATADIR}:${DATADIR_SERVER} \
     -v ${CONFIGDIR}:${CONFIGDIR_SERVER} \
     -v ${CONFIGFILE}:/server/config.py \
+    -v ${DIRECTORY}/traceroutes:/traceroutes:ro \
     -e SERVER_CONFIG=/server/config.py \
     -e TZ=${WEBSERVER_TZ} \
     -l traefik.enable=true \

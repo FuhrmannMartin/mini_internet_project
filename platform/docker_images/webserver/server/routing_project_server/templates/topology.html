@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+
+{% block head %}
+{{ super() }}
+<!-- vis-network CDN -->
+<script src="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/vis-network@9.1.2/styles/vis-network.min.css" />
+{% endblock %}
+
+{% block body %}
+<h1 class="text-2xl font-bold text-center mt-6">Mini-Internet Topology</h1>
+
+<div id="network" class="w-full h-[80vh] mt-4 border"></div>
+
+<div class="legend p-4">
+  <h3 class="text-lg font-semibold">Legend</h3>
+  <div class="legend-item"><span class="dot" style="background: #e74c3c;"></span> Tier 1 AS</div>
+  <div class="legend-item"><span class="dot" style="background: #f39c12;"></span> IXP</div>
+  <div class="legend-item"><span class="dot" style="background: #3498db;"></span> Transit AS (Student)</div>
+  <div class="legend-item"><span class="dot" style="background: #7f8c8d;"></span> Stub AS</div>
+  <div class="legend-item"><span class="legend-line" style="border-top: 2px solid red;"></span> Provider/Customer Link</div>
+  <div class="legend-item"><span class="legend-line" style="border-top: 2px dashed green;"></span> Peer/Peer Link</div>
+  <div class="legend-item"><span class="legend-line" style="border-top: 2px solid #8e44ad;"></span> Traceroute Path</div>
+</div>
+
+<script src="{{ url_for('static', filename='topology.js') }}"></script>
+{% endblock %}

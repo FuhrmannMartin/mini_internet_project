@@ -249,3 +249,96 @@ def _read_clean(filename: os.PathLike) -> List[str]:
     except:
         print("Error accessing " + filename)
         return []
+
+
+def extract_traceroute_as_path(file_path="traceroutes/routes.json"):
+    with open(file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    as_path = []
+    seen_asns = set()
+
+    for hop in data[0]["routes"]:
+        match = re.search(r"group(\d+)", hop["hostname"])
+        if match:
+            asn = int(match.group(1))
+            if asn not in seen_asns:
+                as_path.append(asn)
+                seen_asns.add(asn)
+
+    return as_path
+
+
+def parse_topology_txt(config_defaults):
+    topology_txt = config_defaults['LOCATIONS'].get('topology_txt')
+    topology_json = config_defaults['LOCATIONS'].get('topology_json')
+
+    nodes = []
+    edges = []
+    seen_nodes = set()
+
+    def extract_node_number(as_name):
+        return int(re.findall(r"\d+", as_name)[0])
+
+    def strip_pt(value):
+        return float(value.replace("pt", ""))
+
+    def scale_coordinates(node_data, scale_f):
+        for node in node_data:
+            node['x'] *= scale_f
+            node['y'] *= scale_f
+        return node_data
+
+    # Parse input file
+    with open(topology_txt, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+
+            if line.startswith("node"):
+                match = re.match(r"node (\S+) (\S+) (-?\d+\.?\d*)pt (-?\d+\.?\d*)pt", line)
+                if match:
+                    node_id, role, x_str, y_str = match.groups()
+                    node_num = extract_node_number(node_id)
+
+                    if node_num not in seen_nodes:
+                        seen_nodes.add(node_num)
+                        nodes.append({
+                            "id": node_num,
+                            "label": str(node_num),
+                            "type": role.lower(),
+                            "x": strip_pt(x_str),
+                            "y": -strip_pt(y_str),
+                            "fixed": True
+                        })
+
+            elif line.startswith("edge"):
+                match = re.match(r"edge (\S+) (\S+) (\S+)", line)
+                if match:
+                    from_id = extract_node_number(match.group(1))
+                    to_id = extract_node_number(match.group(2))
+                    edge_type = match.group(3).lower()
+                    edges.append({
+                        "from": from_id,
+                        "to": to_id,
+                        "type": edge_type
+                    })
+
+    # Scale coordinates
+    scale_factor = 1.5
+    nodes = scale_coordinates(nodes, scale_factor)
+
+    # Prepare data object
+    data = {"nodes": nodes, "edges": edges}
+
+    # Check if content changed (optional optimization)
+    if os.path.exists(topology_json):
+        with open(topology_json, "r", encoding="utf-8") as f:
+            existing = json.load(f)
+        if existing == data:
+            return  # No need to rewrite
+
+    # Write to output
+    with open(topology_json, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+    print(f"Updated topology JSON: {topology_json}")

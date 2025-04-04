@@ -27,6 +27,7 @@ from jinja2 import StrictUndefined
 from .services.bgp_policy_analyzer import prepare_bgp_analysis
 from.services.matrix import prepare_matrix
 from .services.login import csrf, login_manager
+from .services.parsers import parse_topology_txt
 
 config_defaults = {
     'SECRET_KEY': os.urandom(32),
@@ -39,6 +40,9 @@ config_defaults = {
         "config_directory": "../../../config",
         "matrix": "../../../groups/matrix/connectivity.txt",
         "matrix_stats": "../../../groups/matrix/stats.txt",
+        "traceroutes": "../../../routes.json",
+        "topology_txt": "static/topology.txt",
+        "topology_json": "static/topology.json",
     },
     'KRILL_URL': "http://{hostname}:3080/index.html",
     'BASIC_AUTH_USERNAME': 'admin',
@@ -72,6 +76,12 @@ def create_app(config=None):
     elif config is not None:
         app.config.from_pyfile(config)
 
+    # Generate topology data once at start
+    from .services.parsers import parse_topology_txt
+    try:
+        parse_topology_txt(config_defaults)
+    except Exception:
+        traceback.print_exc()
 
     # Register Blueprints
     from .routes import main_bp

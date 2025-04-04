@@ -57,7 +57,11 @@ def connectivity_matrix():
         valid=valid, invalid=invalid, failure=failure,
         last_updated=updated, update_frequency=frequency,
     )
-    
+
+@main_bp.route('/traceroutes')
+def show_topology():
+    return render_template('topology.html')
+
 @main_bp.route("/looking-glass")
 @main_bp.route("/looking-glass/<int:group>")
 @main_bp.route("/looking-glass/<int:group>/<router>")
