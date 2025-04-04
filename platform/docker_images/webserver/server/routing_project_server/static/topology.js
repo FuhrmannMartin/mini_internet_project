@@ -63,7 +63,23 @@ async function loadTopology() {
   drawTraceroutePath(network, nodes);
 }
 
+async function drawTraceroutePath(network, allNodes) {
+  const response = await fetch('/api/traceroute');
+  const data = await response.json();
+  const asPath = data.as_path;  // Example: [3, 4, 5, 6, 7, 8]
+  const color_highlight = '#8e44ad'
 
+  const tracerouteEdges = [];
+  for (let i = 0; i < asPath.length - 1; i++) {
+    tracerouteEdges.push({
+      from: asPath[i],
+      to: asPath[i + 1],
+      color: { color: color_highlight },  // purple path
+      width: 3,
+      dashes: false,
+      arrows: 'to'
+    });
+  }
 
   // Add traceroute path on top of existing edges
   network.body.data.edges.add(tracerouteEdges);
