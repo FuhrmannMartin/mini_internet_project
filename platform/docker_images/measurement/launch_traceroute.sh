@@ -11,9 +11,7 @@ src_grp="$1"
 dst_ip="$2"
 
 # Path to persistent JSON file
-folder="traceroutes"
-json_file="/${folder}/routes.json"
-mkdir -p "/${folder}"
+json_file="/traceroutes/routes.json"
 timestamp=$(date "+%Y-%m-%dT%H-%M-%S")
 
 # Temporary files

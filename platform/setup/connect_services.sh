@@ -49,8 +49,8 @@ if [[ "$MeasureRequired" == "True" ]]; then
         --cpus=2 --pids-limit 100 \
         -v /etc/timezone:/etc/timezone:ro \
         -v /etc/localtime:/etc/localtime:ro \
-        -v \
-        "${DIRECTORY}"/config/measurement_welcome_message.txt:/etc/motd:rw \
+        -v "${DIRECTORY}/config/measurement_welcome_message.txt:/etc/motd:rw" \
+        -v "${DIRECTORY}/traceroutes:/traceroutes:rw" \
         --cap-add=NET_ADMIN \
         --network="bridge" -p 2099:22 \
         "${DOCKERHUB_PREFIX}d_measurement" > /dev/null
