@@ -63,7 +63,7 @@ def connectivity_matrix():
 def show_topology():
     return render_template('topology.html')
 
-@main_bp.route("/api/traceroute")
+@main_bp.route("/api/traceroutes")
 def get_traceroute():
     traceroute_path = current_app.config['LOCATIONS']['traceroutes']
     try:

@@ -66,7 +66,7 @@ async function loadTopology() {
 async function drawTraceroutePath(network, allNodes) {
   let data;
   try {
-    const response = await fetch('/api/traceroute');
+    const response = await fetch('/api/traceroutes');
     if (!response.ok) {
       throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
     }
@@ -76,25 +76,40 @@ async function drawTraceroutePath(network, allNodes) {
     return;
   }
 
-  const asPath = data.as_path;  // Example: [3, 4, 5, 6, 7, 8]
-  const color_highlight = '#8e44ad'
+  const color_highlight = '#8e44ad';
+
+  // extract asPath from routes[].hostname: "groupX"
+  const route = data[0]; // only the first traceroute
+  const asPath = [];
+  const seen = new Set();
+
+  for (const hop of route.routes) {
+    const match = hop.hostname.match(/group(\d+)/);
+    if (match) {
+      const asn = parseInt(match[1]);
+      if (!seen.has(asn)) {
+        asPath.push(asn);
+        seen.add(asn);
+      }
+    }
+  }
 
   const tracerouteEdges = [];
   for (let i = 0; i < asPath.length - 1; i++) {
     tracerouteEdges.push({
       from: asPath[i],
       to: asPath[i + 1],
-      color: { color: color_highlight },  // purple path
+      color: { color: color_highlight },
       width: 3,
       dashes: false,
       arrows: 'to'
     });
   }
 
-  // Add traceroute path on top of existing edges
+  // Add traceroute path
   network.body.data.edges.add(tracerouteEdges);
 
-  // Optionally highlight the nodes too
+  // Highlight nodes
   for (const asn of asPath) {
     const node = allNodes.get(asn);
     if (node) {
@@ -102,5 +117,6 @@ async function drawTraceroutePath(network, allNodes) {
     }
   }
 }
+
 
 loadTopology();
