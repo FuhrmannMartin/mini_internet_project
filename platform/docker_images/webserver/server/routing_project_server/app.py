@@ -40,7 +40,6 @@ config_defaults = {
         "config_directory": "../../../config",
         "matrix": "../../../groups/matrix/connectivity.txt",
         "matrix_stats": "../../../groups/matrix/stats.txt",
-        "traceroutes": "../../../traceroutes/routes.json",
         "topology_txt": "server/routing_project_server/static/topology.txt",
         "topology_json": "server/routing_project_server/static/topology.json",
     },

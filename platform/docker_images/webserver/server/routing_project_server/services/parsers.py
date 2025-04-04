@@ -290,38 +290,42 @@ def parse_topology_txt(config_defaults):
         return node_data
 
     # Parse input file
-    with open(topology_txt, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
+    if not os.path.exists(topology_txt):
+        print(f"[ERROR] topology.txt not found at {topology_txt}")
+        return
+    else:
+        with open(topology_txt, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
 
-            if line.startswith("node"):
-                match = re.match(r"node (\S+) (\S+) (-?\d+\.?\d*)pt (-?\d+\.?\d*)pt", line)
-                if match:
-                    node_id, role, x_str, y_str = match.groups()
-                    node_num = extract_node_number(node_id)
+                if line.startswith("node"):
+                    match = re.match(r"node (\S+) (\S+) (-?\d+\.?\d*)pt (-?\d+\.?\d*)pt", line)
+                    if match:
+                        node_id, role, x_str, y_str = match.groups()
+                        node_num = extract_node_number(node_id)
 
-                    if node_num not in seen_nodes:
-                        seen_nodes.add(node_num)
-                        nodes.append({
-                            "id": node_num,
-                            "label": str(node_num),
-                            "type": role.lower(),
-                            "x": strip_pt(x_str),
-                            "y": -strip_pt(y_str),
-                            "fixed": True
+                        if node_num not in seen_nodes:
+                            seen_nodes.add(node_num)
+                            nodes.append({
+                                "id": node_num,
+                                "label": str(node_num),
+                                "type": role.lower(),
+                                "x": strip_pt(x_str),
+                                "y": -strip_pt(y_str),
+                                "fixed": True
+                            })
+
+                elif line.startswith("edge"):
+                    match = re.match(r"edge (\S+) (\S+) (\S+)", line)
+                    if match:
+                        from_id = extract_node_number(match.group(1))
+                        to_id = extract_node_number(match.group(2))
+                        edge_type = match.group(3).lower()
+                        edges.append({
+                            "from": from_id,
+                            "to": to_id,
+                            "type": edge_type
                         })
-
-            elif line.startswith("edge"):
-                match = re.match(r"edge (\S+) (\S+) (\S+)", line)
-                if match:
-                    from_id = extract_node_number(match.group(1))
-                    to_id = extract_node_number(match.group(2))
-                    edge_type = match.group(3).lower()
-                    edges.append({
-                        "from": from_id,
-                        "to": to_id,
-                        "type": edge_type
-                    })
 
     # Scale coordinates
     scale_factor = 1.5

@@ -62,6 +62,7 @@ LOCATIONS = {
     'groups': '${DATADIR_SERVER}',
     "matrix": "${DATADIR_SERVER}/matrix/connectivity.txt",
     "matrix_stats": "${DATADIR_SERVER}/matrix/stats.txt",
+    "traceroutes": "/traceroutes/routes.json",
 }
 KRILL_URL="${KRILL_SCHEME}://{hostname}:${WEBSERVER_PORT_KRILL}/index.html"
 BASIC_AUTH_USERNAME = 'admin'
