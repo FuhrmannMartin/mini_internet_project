@@ -66,7 +66,7 @@ async function loadTopology() {
 async function drawTraceroutePath(network, allNodes) {
   let data;
   try {
-    const response = await fetch('/api/traceroutes');
+    const response = await fetch('/traceroutes/routes');
     if (!response.ok) {
       throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
     }

@@ -346,3 +346,26 @@ def parse_topology_txt(config_defaults):
         json.dump(data, f, indent=2)
 
     print(f"Updated topology JSON: {topology_json}")
+
+
+def get_as_router_map(directory: os.PathLike) -> Dict[int, List[str]]:
+    """
+    Return mapping: AS number -> list of router names.
+    Includes only routers that have a looking_glass.txt file.
+    """
+    result = {}
+    try:
+        for groupdir in Path(directory).iterdir():
+            if not groupdir.is_dir() or not groupdir.name.startswith("g"):
+                continue
+            group_num = int(groupdir.name[1:])
+            routers = []
+            for routerdir in groupdir.iterdir():
+                if routerdir.is_dir():
+                    if (routerdir / "looking_glass.txt").is_file():
+                        routers.append(routerdir.name)
+            if routers:
+                result[group_num] = routers
+    except Exception as e:
+        print(f"[parser] Error in get_as_router_map: {e}")
+    return result

@@ -59,11 +59,33 @@ def connectivity_matrix():
         last_updated=updated, update_frequency=frequency,
     )
 
-@main_bp.route('/traceroutes')
+@main_bp.route("/traceroutes")
 def show_topology():
-    return render_template('topology.html')
+    group_router_map = parsers.get_as_router_map(
+        current_app.config['LOCATIONS']['groups']
+    )
 
-@main_bp.route("/api/traceroutes")
+    if not group_router_map:
+        return render_template(
+            "topology.html",
+            group=None,
+            router=None,
+            dropdown_groups=[],
+            all_routers={}
+        )
+
+    group = min(group_router_map)
+    router = group_router_map[group][0]
+
+    return render_template(
+        "topology.html",
+        group=group,
+        router=router,
+        dropdown_groups=list(group_router_map),
+        all_routers=group_router_map
+    )
+
+@main_bp.route("/traceroutes/routes")
 def get_traceroute():
     traceroute_path = current_app.config['LOCATIONS']['traceroutes']
     try:

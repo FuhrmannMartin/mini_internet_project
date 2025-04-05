@@ -16,6 +16,57 @@
 	This visualization shows the AS-level topology including Tier 1 ISPs, Internet Exchange Points, student-operated transit ASes, and stub networks. You can also view the traceroute path dynamically overlaid on top of this topology.
     </p>
 
+
+<div class="bg-neutral-50 p-4 rounded border text-sm text-neutral-700 mb-6">
+<div class="flex flex-wrap items-center justify-center gap-8">
+
+<!-- Origin AS -->
+<div>
+  <span class="font-bold">Origin AS</span>
+  <select id="origin-as"
+          class="bg-transparent border-0 border-b-2 border-neutral-400 hover:border-[#ff7e79] px-2 py-1 mt-1">
+    {% for _group in dropdown_groups|sort %}
+      <option value="{{ _group }}" {% if _group == group %}selected{% endif %}>
+        {{ _group }}
+      </option>
+    {% endfor %}
+  </select>
+</div>
+
+<!-- Target AS -->
+<div>
+  <span class="font-bold">Target AS</span>
+  <select id="target-as"
+          onchange="updateTargetRouters(this.value)"
+          class="bg-transparent border-0 border-b-2 border-neutral-400 hover:border-[#ff7e79] px-2 py-1 mt-1">
+    {% for _group in dropdown_groups|sort %}
+      <option value="{{ _group }}" {% if _group == group %}selected{% endif %}>
+        {{ _group }}
+      </option>
+    {% endfor %}
+  </select>
+</div>
+
+    <!-- Target Router -->
+    <div>
+      <span class="font-bold">Target Router</span>
+      <select id="target-router"
+              class="bg-transparent border-0 border-b-2 border-neutral-400 hover:border-[#ff7e79] px-2 py-1 mt-1">
+        <!-- Filled by JS -->
+      </select>
+    </div>
+
+    <!-- Run Button -->
+    <div class="flex items-end">
+      <button onclick="runTraceroute()"
+              class="px-4 py-2 bg-[#ff7e79] hover:bg-[#ff5c58] text-white rounded shadow transition">
+        Run Traceroute
+      </button>
+    </div>
+
+  </div>
+</div>
+
     <div id="network" class="w-full h-[80vh] mt-6 mb-8 border rounded shadow-sm bg-white"></div>
 
     <div class="legend bg-neutral-50 p-4 rounded border text-sm text-neutral-700">
@@ -54,4 +105,41 @@
 
     <script src="{{ url_for('static', filename='topology.js') }}"></script>
 </div>
+
+<script>
+  const allRouters = {{ all_routers | tojson }};
+
+  function updateTargetRouters(asn) {
+    const routerSelect = document.getElementById("target-router");
+    routerSelect.innerHTML = "";
+
+    const routers = allRouters[asn] || [];
+    routers.forEach(router => {
+      const option = document.createElement("option");
+      option.value = router;
+      option.text = router;
+      routerSelect.appendChild(option);
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const initialTargetAS = document.getElementById("target-as").value;
+    updateTargetRouters(initialTargetAS);
+  });
+
+  function runTraceroute() {
+    const origin = document.getElementById("origin-as").value;
+    const target = document.getElementById("target-as").value;
+    const router = document.getElementById("target-router").value;
+
+    if (!origin || !target || !router) {
+      alert("Please select Origin AS, Target AS, and Target Router.");
+      return;
+    }
+
+    console.log("Run traceroute from AS", origin, "to", target, "via", router);
+    // later: fetch('/trigger', {method: 'POST', body: ...})
+  }
+</script>
+
 {% endblock %}
