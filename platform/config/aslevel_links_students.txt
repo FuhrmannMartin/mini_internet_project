@@ -62,8 +62,8 @@
 15	ZURI	Customer	13	LYON	Provider	179.13.15.15/24
 13	MILA	Provider	16	ZURI	Customer	179.13.16.13/24
 16	ZURI	Customer	13	MILA	Provider	179.13.16.16/24
-13	LUGA	Peer    	14	LUGA	Peer    	179.13.14.0/24
-14	LUGA	Peer    	13	LUGA	Peer    	179.13.14.0/24
+13	LUGA	Peer    	14	LUGA	Peer    	179.13.14.13/24
+14	LUGA	Peer    	13	LUGA	Peer    	179.13.14.14/24
 13	VIEN	Peer    	82	None	Peer    	180.82.0.13/24
 82	None	Peer    	13	VIEN	Peer    	180.82.0.82/24
 14	LYON	Provider	15	ZURI	Customer	179.14.15.14/24
