@@ -172,8 +172,8 @@ time ./setup/mpls_setup.sh "${DIRECTORY}"
 echo ""
 echo ""
 
-echo "Waiting 60sec for RPKI CA and proxy to startup.."
-sleep 60
+echo "Waiting 120sec for RPKI CA and proxy to startup.."
+sleep 120
 
 echo "rpki_setup.sh $(($(date +%s%N)/1000000))" >> "${DIRECTORY}"/log.txt
 echo "rpki_setup.sh: "
@@ -230,3 +230,15 @@ echo "bgp_clear $(($(date +%s%N)/1000000))" >> "${DIRECTORY}"/log.txt
 time ./setup/bgp_clear.sh "${DIRECTORY}"
 
 echo "$(date +%Y-%m-%d_%H-%M-%S)"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+autoconfig="${SCRIPT_DIR}/utils/autoconfiguration/configure_as.sh"
+
+# Execute autoconfiguration script at the end
+if [[ -f "$autoconfig" && -x "$autoconfig" ]]; then
+  echo
+  echo "===== Running autoconfiguration script ====="
+  "$autoconfig"
+else
+  echo "Autoconfiguration script not found or not executable: $autoconfig"
+fi
