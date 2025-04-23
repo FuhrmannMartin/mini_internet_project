@@ -400,27 +400,48 @@ def get_all_routers(config_dir: os.PathLike) -> Dict[int, Dict]:
     as_config_file = config_dir / "AS_config.txt"
     script_path = config_dir / "subnet_config.sh"
 
-    # border-router from aslevel_links_students.txt
-    border_router_map = {}
+    # Parse public AS connections
     connections = parse_public_as_connections(public_as_connections)
-    for a, b in connections:
-        for entry in (a, b):
-            if entry.get("ip"):
-                ip = entry["ip"].split("/")[0]
-                border_router_map.setdefault(int(entry["asn"]), {})[entry["router"]] = ip
 
+    # Initialize public_links per AS
+    public_links_map = {}
+
+    # Go through each connection and prepare public link entries
+    for a, b in connections:
+        ip_a = a.get("ip", "").split("/")[0] if a.get("ip") else None
+        ip_b = b.get("ip", "").split("/")[0] if b.get("ip") else None
+        subnet = None
+        if ip_a:
+            subnet = f"{ip_a.rsplit('.', 1)[0]}.0/24"
+
+        for side, peer in [(a, b), (b, a)]:
+            asn = int(side["asn"])
+            if asn not in public_links_map:
+                public_links_map[asn] = []
+
+            public_links_map[asn].append({
+                "peer_asn": int(peer["asn"]),
+                "router": side["router"],
+                "peer_router": peer["router"],
+                "ip": side.get("ip", "").split("/")[0] if side.get("ip") else None,
+                "peer_ip": peer.get("ip", "").split("/")[0] if peer.get("ip") else None,
+                "role": side["role"],
+                "peer_role": peer["role"],
+                "subnet": subnet
+            })
+
+    # Load AS config and prepare full result
     as_info = parse_as_config(as_config_file, config_dir)
     result = {}
 
     for asn, info in as_info.items():
         if info.get("type") != "AS":
-            continue  # Skip if not of type "AS"
+            continue  # Skip non-AS entries
 
         routers_list = info.get("routers", [])
         router_map = {}
 
         for idx, router_name in enumerate(routers_list):
-            idx = routers_list.index(router_name)
             try:
                 loopback_ip = call_subnet_func("subnet_router", [asn, idx, "router"], script_path)
                 loopback_ip = loopback_ip.split("/")[0]
@@ -445,7 +466,8 @@ def get_all_routers(config_dir: os.PathLike) -> Dict[int, Dict]:
 
         result[asn] = {
             "type": info["type"],
-            "routers": router_map
+            "routers": router_map,
+            "public_links": public_links_map.get(asn, [])
         }
 
     return result

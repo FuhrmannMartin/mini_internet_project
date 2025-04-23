@@ -171,7 +171,6 @@ function drawTraceroutePath(network, allNodes, tracerouteData) {
   try {
     const tracerouteColor = '#8e44ad';
 
-    // These match the ones from loadTopology
     const nodeColors = {
       tier1: "#e74c3c",
       ixp: "#f39c12",
@@ -179,7 +178,6 @@ function drawTraceroutePath(network, allNodes, tracerouteData) {
       stub: "#7f8c8d"
     };
 
-    // Bail if no traceroute
     if (!tracerouteData || !tracerouteData.routes) {
       console.warn("Invalid traceroute data.");
       return;
@@ -187,15 +185,13 @@ function drawTraceroutePath(network, allNodes, tracerouteData) {
 
     const asPath = [];
     const seen = new Set();
-
-    // Include origin AS
     const originASN = parseInt(document.getElementById("origin-as").value);
+
     if (!seen.has(originASN)) {
       asPath.push(originASN);
       seen.add(originASN);
     }
 
-    // Parse ASN from probe IPs using allRouters
     for (const hop of tracerouteData.routes.hops || tracerouteData.routes) {
       for (const probe of hop.probes || []) {
         const probeIp = probe.ip;
@@ -223,7 +219,7 @@ function drawTraceroutePath(network, allNodes, tracerouteData) {
       return;
     }
 
-    // Highlight involved nodes
+    // Highlight involved AS nodes
     for (const asn of asPath) {
       allNodes.update({
         id: asn,
@@ -241,18 +237,59 @@ function drawTraceroutePath(network, allNodes, tracerouteData) {
       });
     }
 
-    // Draw traceroute edges (if multiple ASes involved)
+    // Add edges including IXP detection
     if (asPath.length > 1) {
       const tracerouteEdges = [];
+      const allEdges = network.body.data.edges.get();
+      const allEdgeSet = new Set(allEdges.map(e => `${e.from}->${e.to}`));
+      const allNodesMap = new Map(network.body.data.nodes.get().map(n => [n.id, n]));
+
       for (let i = 0; i < asPath.length - 1; i++) {
-        tracerouteEdges.push({
-          from: asPath[i],
-          to: asPath[i + 1],
-          color: { color: tracerouteColor },
-          width: 3,
-          dashes: false,
-          arrows: 'to'
-        });
+        const from = asPath[i];
+        const to = asPath[i + 1];
+        const directEdge = `${from}->${to}`;
+        const reverseEdge = `${to}->${from}`;
+
+        if (allEdgeSet.has(directEdge) || allEdgeSet.has(reverseEdge)) {
+          tracerouteEdges.push({
+            from,
+            to,
+            color: { color: tracerouteColor },
+            width: 3,
+            dashes: false,
+            arrows: 'to'
+          });
+        } else {
+          // Look for a real IXP node connecting both ASes
+          const ixpNode = Array.from(allNodesMap.values()).find(n =>
+            n.type === "ixp" &&
+            (allEdgeSet.has(`${from}->${n.id}`) || allEdgeSet.has(`${n.id}->${from}`)) &&
+            (allEdgeSet.has(`${n.id}->${to}`) || allEdgeSet.has(`${to}->${n.id}`))
+          );
+
+          if (ixpNode) {
+            tracerouteEdges.push(
+              {
+                from,
+                to: ixpNode.id,
+                color: { color: tracerouteColor },
+                width: 3,
+                dashes: true,
+                arrows: 'to'
+              },
+              {
+                from: ixpNode.id,
+                to,
+                color: { color: tracerouteColor },
+                width: 3,
+                dashes: true,
+                arrows: 'to'
+              }
+            );
+          } else {
+            console.warn(`No direct edge or IXP found between AS${from} and AS${to}`);
+          }
+        }
       }
 
       network.body.data.edges.add(tracerouteEdges);
@@ -262,6 +299,7 @@ function drawTraceroutePath(network, allNodes, tracerouteData) {
     console.error("Failed to draw traceroute:", err);
   }
 }
+
 
 function resetVisualization() {
   const tracerouteColor = '#8e44ad';
@@ -275,13 +313,13 @@ function resetVisualization() {
 
   if (!window.currentNetwork || !window.currentNodes) return;
 
-  // 1. Entferne alte Traceroute-Kanten
+  // 1. Remove old edges
   const previousEdges = window.currentNetwork.body.data.edges.get().filter(e =>
     e.color?.color === tracerouteColor
   );
   window.currentNetwork.body.data.edges.remove(previousEdges);
 
-  // 2. Setze alle Node-Farben zur�ck
+  // 2. Reset node colors
   window.currentNodes.get().forEach(node => {
     const originalColor = nodeColors[node.type] || "#ccc";
     window.currentNodes.update({
@@ -322,7 +360,7 @@ async function loadTopology() {
   const nodes = new vis.DataSet(data.nodes.map(n => ({
     id: n.id,
     label: n.type === 'ixp' ? `IXP ${n.id}` : n.label,
-    type: n.type, // ? Store the type for future resets
+    type: n.type,
     color: nodeColors[n.type] || "#ccc",
     x: n.x,
     y: n.y,
@@ -339,14 +377,46 @@ async function loadTopology() {
   })));
 
   const container = document.getElementById("network");
-  const network = new vis.Network(container, { nodes, edges }, {
+
+  // Assign globally so other functions can use it
+  window.currentNetwork = new vis.Network(container, { nodes, edges }, {
     physics: false,
     layout: { improvedLayout: false },
     interaction: { dragNodes: false }
   });
 
-  window.currentNetwork = network;
+  // Also save nodes globally for router type access
   window.currentNodes = nodes;
+}
+
+function showASLinkBetween(asn1, asn2) {
+  const box = document.getElementById("router-connection-info");
+  if (!box) return;
+
+  const entry1 = allRouters[asn1];
+  if (!entry1 || !Array.isArray(entry1.public_links)) return;
+
+  const linksBetween = entry1.public_links.filter(link => link.peer_asn == asn2);
+
+  if (linksBetween.length === 0) {
+    box.innerHTML = `<strong>AS${asn1} ↔ AS${asn2}</strong><br/><em>No public links found between these ASes.</em>`;
+  } else {
+    box.innerHTML = `
+      <strong>External Links between AS${asn1} and AS${asn2}:</strong>
+      <ul class="list-disc pl-5 mt-2 space-y-1">
+        ${linksBetween.map(link => `
+          <li>
+            AS${asn1}.${link.router} (${link.ip}) ↔ AS${asn2}.${link.peer_router} (${link.peer_ip})<br/>
+            <span class="text-xs text-neutral-600">
+              Role: ${link.role} ↔ ${link.peer_role} — Subnet: <code>${link.subnet}</code>
+            </span>
+          </li>
+        `).join("")}
+      </ul>
+    `;
+  }
+
+  box.classList.remove("hidden");
 }
 
 async function init() {
@@ -372,6 +442,33 @@ async function init() {
     });
     updateTargetRouters(targetAS.value);
   }
+
+  const network = window.currentNetwork;
+  if (!network) {
+    console.error("Network not loaded.");
+    return;
+  }
+
+  network.on("click", function (params) {
+    const box = document.getElementById("router-connection-info");
+    if (!box) return;
+
+    const isASNumber = id => /^\d+$/.test(id);
+
+    if (params.edges.length > 0) {
+      const edge = network.body.data.edges.get(params.edges[0]);
+      const from = edge.from;
+      const to = edge.to;
+
+      if (isASNumber(from) && isASNumber(to)) {
+        showASLinkBetween(from, to);
+        return;
+      }
+    }
+
+    box.classList.add("hidden");
+    box.innerHTML = "";
+  });
 }
 
 document.addEventListener("DOMContentLoaded", init);
