@@ -413,6 +413,9 @@ def get_all_routers(config_dir: os.PathLike) -> Dict[int, Dict]:
     result = {}
 
     for asn, info in as_info.items():
+        if info.get("type") != "AS":
+            continue  # Skip if not of type "AS"
+
         routers_list = info.get("routers", [])
         router_map = {}
 
