@@ -240,6 +240,8 @@ def _read_json_safe(filename: os.PathLike, sleep_time=0.01, max_attempts=200):
 
             # The file may have changed, wait a bit.
             time.sleep(sleep_time)
+            return None
+    return None
 
 
 def _read_clean(filename: os.PathLike) -> List[str]:
@@ -438,7 +440,12 @@ def get_all_routers(config_dir: os.PathLike) -> Dict[int, Dict]:
         if info.get("type") != "AS":
             continue  # Skip non-AS entries
 
-        routers_list = info.get("routers", [])
+        seen = set()
+        routers_list = []
+        for r in info.get("routers", []):
+            if r not in seen:
+                seen.add(r)
+                routers_list.append(r)
         router_map = {}
 
         for idx, router_name in enumerate(routers_list):
