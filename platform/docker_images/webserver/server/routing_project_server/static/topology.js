@@ -171,13 +171,6 @@ function drawTraceroutePath(network, allNodes, tracerouteData) {
   try {
     const tracerouteColor = '#8e44ad';
 
-    const nodeColors = {
-      tier1: "#e74c3c",
-      ixp: "#f39c12",
-      student: "#3498db",
-      stub: "#7f8c8d"
-    };
-
     if (!tracerouteData || !tracerouteData.routes) {
       console.warn("Invalid traceroute data.");
       return;
@@ -219,7 +212,62 @@ function drawTraceroutePath(network, allNodes, tracerouteData) {
       return;
     }
 
-    // Highlight involved AS nodes
+    // Draw traceroute path edges
+    const tracerouteEdges = [];
+    const allEdges = network.body.data.edges.get();
+    const allEdgeSet = new Set(allEdges.map(e => `${e.from}->${e.to}`));
+    const allNodesMap = new Map(network.body.data.nodes.get().map(n => [n.id, n]));
+
+    for (let i = 0; i < asPath.length - 1; i++) {
+      const from = asPath[i];
+      const to = asPath[i + 1];
+      const directEdge = `${from}->${to}`;
+      const reverseEdge = `${to}->${from}`;
+
+      if (allEdgeSet.has(directEdge) || allEdgeSet.has(reverseEdge)) {
+        tracerouteEdges.push({
+          from,
+          to,
+          color: { color: tracerouteColor },
+          width: 3,
+          dashes: false,
+          arrows: 'to'
+        });
+      } else {
+        const ixpNode = Array.from(allNodesMap.values()).find(n =>
+          n.type === "ixp" &&
+          (allEdgeSet.has(`${from}->${n.id}`) || allEdgeSet.has(`${n.id}->${from}`)) &&
+          (allEdgeSet.has(`${n.id}->${to}`) || allEdgeSet.has(`${to}->${n.id}`))
+        );
+
+        if (ixpNode) {
+          tracerouteEdges.push(
+            {
+              from,
+              to: ixpNode.id,
+              color: { color: tracerouteColor },
+              width: 3,
+              dashes: true,
+              arrows: 'to'
+            },
+            {
+              from: ixpNode.id,
+              to,
+              color: { color: tracerouteColor },
+              width: 3,
+              dashes: true,
+              arrows: 'to'
+            }
+          );
+        } else {
+          console.warn(`No direct edge or IXP found between AS${from} and AS${to}`);
+        }
+      }
+    }
+
+    network.body.data.edges.add(tracerouteEdges);
+
+    // Highlight AS nodes involved
     for (const asn of asPath) {
       allNodes.update({
         id: asn,
@@ -237,62 +285,27 @@ function drawTraceroutePath(network, allNodes, tracerouteData) {
       });
     }
 
-    // Add edges including IXP detection
-    if (asPath.length > 1) {
-      const tracerouteEdges = [];
-      const allEdges = network.body.data.edges.get();
-      const allEdgeSet = new Set(allEdges.map(e => `${e.from}->${e.to}`));
-      const allNodesMap = new Map(network.body.data.nodes.get().map(n => [n.id, n]));
+    // Check for policy violation AFTER drawing everything
+    const violation = detectPolicyViolation(asPath, allRouters);
+    if (violation && violation.reason) {
+      const box = document.getElementById("traceroute-result");
+      box.innerHTML += `
+        <div class="mt-2 text-red-600 font-semibold text-sm">
+          Policy Violation Detected: ${violation.reason}
+        </div>
+      `;
 
-      for (let i = 0; i < asPath.length - 1; i++) {
-        const from = asPath[i];
-        const to = asPath[i + 1];
-        const directEdge = `${from}->${to}`;
-        const reverseEdge = `${to}->${from}`;
-
-        if (allEdgeSet.has(directEdge) || allEdgeSet.has(reverseEdge)) {
-          tracerouteEdges.push({
-            from,
-            to,
-            color: { color: tracerouteColor },
-            width: 3,
-            dashes: false,
-            arrows: 'to'
-          });
-        } else {
-          // Look for a real IXP node connecting both ASes
-          const ixpNode = Array.from(allNodesMap.values()).find(n =>
-            n.type === "ixp" &&
-            (allEdgeSet.has(`${from}->${n.id}`) || allEdgeSet.has(`${n.id}->${from}`)) &&
-            (allEdgeSet.has(`${n.id}->${to}`) || allEdgeSet.has(`${to}->${n.id}`))
-          );
-
-          if (ixpNode) {
-            tracerouteEdges.push(
-              {
-                from,
-                to: ixpNode.id,
-                color: { color: tracerouteColor },
-                width: 3,
-                dashes: true,
-                arrows: 'to'
-              },
-              {
-                from: ixpNode.id,
-                to,
-                color: { color: tracerouteColor },
-                width: 3,
-                dashes: true,
-                arrows: 'to'
-              }
-            );
-          } else {
-            console.warn(`No direct edge or IXP found between AS${from} and AS${to}`);
-          }
-        }
+      const [from, to] = violation.offendingEdge || [];
+      if (from && to) {
+        network.body.data.edges.add({
+          from,
+          to,
+          color: { color: "red" },
+          width: 3,
+          dashes: true,
+          arrows: 'to'
+        });
       }
-
-      network.body.data.edges.add(tracerouteEdges);
     }
 
   } catch (err) {
@@ -300,10 +313,8 @@ function drawTraceroutePath(network, allNodes, tracerouteData) {
   }
 }
 
-
 function resetVisualization() {
   const tracerouteColor = '#8e44ad';
-
   const nodeColors = {
     tier1: "#e74c3c",
     ixp: "#f39c12",
@@ -313,23 +324,26 @@ function resetVisualization() {
 
   if (!window.currentNetwork || !window.currentNodes) return;
 
-  // 1. Remove old edges
-  const previousEdges = window.currentNetwork.body.data.edges.get().filter(e =>
-    e.color?.color === tracerouteColor
-  );
-  window.currentNetwork.body.data.edges.remove(previousEdges);
+  const network = window.currentNetwork;
+  const nodes = window.currentNodes;
 
-  // 2. Reset node colors
-  window.currentNodes.get().forEach(node => {
-    const originalColor = nodeColors[node.type] || "#ccc";
-    window.currentNodes.update({
+  // 1. Remove ALL custom (traceroute) edges – purple or red ones
+  const customEdges = network.body.data.edges.get().filter(e =>
+    e.color?.color === tracerouteColor || e.color?.color === "red"
+  );
+  network.body.data.edges.remove(customEdges);
+
+  // 2. Reset node colors and fonts
+  nodes.get().forEach(node => {
+    const defaultColor = nodeColors[node.type] || "#ccc";
+    nodes.update({
       id: node.id,
       color: {
-        background: originalColor,
-        border: originalColor,
+        background: defaultColor,
+        border: defaultColor,
         highlight: {
-          background: originalColor,
-          border: originalColor
+          background: defaultColor,
+          border: defaultColor
         }
       },
       font: {
@@ -337,6 +351,14 @@ function resetVisualization() {
       }
     });
   });
+
+  // 3. Remove policy violation box (if any)
+  const box = document.getElementById("traceroute-result");
+  if (box) {
+    const lines = box.innerHTML.split("<div");
+    const filtered = lines.filter(line => !line.includes("Policy Violation"));
+    box.innerHTML = filtered.join("<div");
+  }
 }
 
 async function loadTopology() {
@@ -419,6 +441,66 @@ function showASLinkBetween(asn1, asn2) {
   box.classList.remove("hidden");
 }
 
+function detectPolicyViolation(asPath, allRouters) {
+  if (asPath.length < 2) return null;
+
+  const getRelationship = (from, to) => {
+    const links = allRouters[from]?.public_links || [];
+    const link = links.find(l => l.peer_asn === to);
+    return link?.peer_role?.toLowerCase() || null;
+  };
+
+  let state = "start";
+
+  for (let i = 0; i < asPath.length - 1; i++) {
+    const from = asPath[i];
+    const to = asPath[i + 1];
+    const rel = getRelationship(from, to);
+
+    // Use "peer" (? over) as default if unknown
+    const direction = (() => {
+      switch (rel || "peer") {
+        case "provider": return "up";
+        case "peer":     return "over";
+        case "customer": return "down";
+        default:         return "over";
+      }
+    })();
+
+    if (state === "start") {
+      state = direction;
+    } else if (state === "up") {
+      if (direction === "up" || direction === "over") {
+        state = direction;
+      } else if (direction === "down") {
+        state = "down";
+      }
+    } else if (state === "over") {
+      if (direction === "over") {
+        continue;
+      } else if (direction === "down") {
+        state = "down";
+      } else {
+        return {
+          reason: `Invalid OVER &rarr; UP transition at AS${from} &rarr; AS${to}`,
+          offendingEdge: [from, to]
+        };
+      }
+    } else if (state === "down") {
+      if (direction === "down") {
+        continue;
+      } else {
+        return {
+          reason: `Invalid DOWN &rarr; ${direction.toUpperCase()} transition at AS${from} &rarr; AS${to}`,
+          offendingEdge: [from, to]
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
 async function init() {
   await loadTopology();
 
@@ -472,3 +554,6 @@ async function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+window.resetVisualization = resetVisualization;
+window.drawTraceroutePath = drawTraceroutePath;
+
